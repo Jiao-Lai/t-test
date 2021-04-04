@@ -1,0 +1,78 @@
+---
+title: "t_test"
+author: "Jiao Lai"
+date: "4/4/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+This file documents how to conduct three different kinds of t test using R: paired t test, unpaired t test with equal variance, and unpaired t test with unequal variance. And assumptions, how to check assumptions for these tests.
+
+1. Unpaired t test with equal variance.
+Assumptions: (1) The two samples are independent. (2) The two groups of samples (A and B), being compared, are normally distributed. Can be checked using Shapiro-Wilk test. (3) The variance of the two groups are equivalent, and hence pooled sample variance is used to calculate t statistic. This can be checked using F-test.
+R code: t.test(x1, x2 , alternative = 'two.sided', var.equal = TRUE)
+
+Data simulation:
+```{r}
+set.seed(123)
+A <- rnorm(20)
+B <- rnorm(20)
+dat <- data.frame(group = rep(c('A', 'B'), each = 20),
+                  x = c(A, B))
+```
+Compute summary statistics by groups.
+
+```{r}
+library(dplyr)
+dat %>% group_by(group) %>%
+  summarize(count = n(),
+            mean = mean(x),
+            sd = sd(x)
+            )
+```
+Visualize summary data.
+
+```{r}
+library(ggplot2)
+ggplot(data = dat, aes(x = group, y = x, color = group))+
+  geom_boxplot()
+
+```
+Test for normality.
+```{r}
+with(dat, shapiro.test(x[group == 'A']))
+with(dat, shapiro.test(x[group == 'B']))
+```
+Test for homogeneity in variances.
+```{r}
+var.test(x ~ group, data = dat)
+```
+Independent sample t test.
+```{r}
+# method 1
+unpair_1 = t.test(x ~ group, data = dat, var.equal = TRUE)
+# method 2
+unpair_2 = t.test(A, B, var.equal = TRUE)
+```
+Save and extract test result.
+```{r}
+library(broom)
+unpair_tidy = tidy(unpair_1)
+unpair_tidy$p.value
+```
+2. Unpaired t test with un-equal variance.
+Assumptions: (1) The two samples are independent. (2) The two groups of samples (A and B), being compared, are normally distributed. Can be checked using Shapiro-Wilk test. (3) The variance of the two groups are inequivalent. This can be checked using F-test.
+R code: t.test(x1, x2 , alternative = 'two.sided', var.equal = FALSE)
+```{r}
+t.test(x ~ group, data = dat, var.equal = FALSE)
+```
+3. Paired t test.
+Assumptions: (1) The two samples are correlated. For example, the same group of subjects are observed at different time. (2) The two groups of samples (A and B), being compared, are normally distributed. Can be checked using Shapiro-Wilk test. 
+R code: t.test(x1, x2 , alternative = 'two.sided', paired = TRUE)
+Cannot use formula for paired t test, instead, we have to specify the variables we are comparing. Make sure the data are paired correctly, and the sample sizes has to be the same.
+```{r}
+t.test(A, B, paired = TRUE)
+
+```
